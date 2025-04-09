@@ -4,7 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import "./Join.css";
 
-// Dynamic socket connection
+// Dynamic socket connection: use localhost in development, or current origin in production.
 const socket = io(
   window.location.hostname === "localhost"
     ? "http://localhost:5000"
@@ -12,7 +12,7 @@ const socket = io(
 );
 
 function Join() {
-  const { id } = useParams(); // Stream code from URL (e.g. /join/ABC123)
+  const { id } = useParams(); // Extract stream code from URL (e.g. /join/ABC123)
   const [streamCode, setStreamCode] = useState("");
   const [joined, setJoined] = useState(false);
   const [quality, setQuality] = useState("720p");
@@ -20,11 +20,12 @@ function Join() {
   const videoRef = useRef(null);
   const pc = useRef(null);
 
+  // Listen for connection and signaling events
   useEffect(() => {
     socket.on("connect", () => {
       console.log("[JOIN] Connected to server");
       if (id) {
-        console.log("[JOIN] Auto-joining room from URL:", id);
+        console.log("[JOIN] URL has room code. Auto-joining room:", id);
         setStreamCode(id);
         joinStream(id);
       }
@@ -38,19 +39,20 @@ function Join() {
     socket.on("signal", (data) => {
       console.log("[JOIN] Received signal:", data);
       const { type, data: signalData, from } = data;
+
       if (type === "answer") {
-        pc.current
-          .setRemoteDescription(new RTCSessionDescription(signalData))
+        console.log("[JOIN] Answer received. Setting remote description...");
+        pc.current.setRemoteDescription(new RTCSessionDescription(signalData))
           .then(() => {
-            console.log("[JOIN] Set remote description with answer");
+            console.log("[JOIN] Remote description set with answer");
           })
           .catch((err) => console.error("[JOIN] Error setting remote description:", err));
         setBroadcasterId(from);
       } else if (type === "ice-candidate") {
-        pc.current
-          .addIceCandidate(new RTCIceCandidate(signalData))
+        console.log("[JOIN] ICE candidate received:", signalData);
+        pc.current.addIceCandidate(new RTCIceCandidate(signalData))
           .then(() => {
-            console.log("[JOIN] ICE candidate added");
+            console.log("[JOIN] ICE candidate added successfully");
           })
           .catch((err) => console.error("[JOIN] Error adding ICE candidate:", err));
       }
@@ -63,24 +65,33 @@ function Join() {
     };
   }, [id]);
 
+  // Join the stream and set up a peer connection
   const joinStream = (room = streamCode) => {
     if (room.trim() !== "") {
       console.log("[JOIN] Joining room:", room);
       socket.emit("join", { room, username: "Viewer" });
       setJoined(true);
-      // Request the broadcaster's socket ID.
+
+      // Request the broadcaster's socket ID
       socket.emit("get_broadcaster", { room });
 
-      // Create a new peer connection with a STUN server.
+      // Create a new RTCPeerConnection with STUN server configuration
       pc.current = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       });
+      console.log("[JOIN] Created new RTCPeerConnection", pc.current);
 
-      // Add transceiver for video in recvonly mode.
+      // Add a transceiver for video in receive-only mode – this forces the peer
+      // connection to expect a video track (useful for triggering the ontrack event).
       pc.current.addTransceiver("video", { direction: "recvonly" });
-      // Optionally, for audio, add:
-      // pc.current.addTransceiver("audio", { direction: "recvonly" });
+      console.log("[JOIN] Added video transceiver for recvonly");
 
+      // Log ICE connection state changes (debugging)
+      pc.current.oniceconnectionstatechange = () => {
+        console.log("[JOIN] ICE connection state changed to:", pc.current.iceConnectionState);
+      };
+
+      // When an ICE candidate is generated locally, send it to the broadcaster
       pc.current.onicecandidate = (event) => {
         if (event.candidate && broadcasterId) {
           console.log("[JOIN] Sending ICE candidate to broadcaster:", event.candidate);
@@ -93,12 +104,17 @@ function Join() {
         }
       };
 
+      // When the remote stream arrives, attach it to the video element
       pc.current.ontrack = (event) => {
-        console.log("[JOIN] Received remote track", event.streams[0]);
-        videoRef.current.srcObject = event.streams[0];
+        console.log("[JOIN] Received remote track. Attaching stream to video element", event.streams[0]);
+        if (videoRef.current) {
+          videoRef.current.srcObject = event.streams[0];
+        } else {
+          console.error("[JOIN] videoRef is null!");
+        }
       };
 
-      // Create an offer, set it locally, and send it.
+      // Create an offer, set it as the local description, and send it to broadcaster
       pc.current.createOffer()
         .then((offer) => {
           console.log("[JOIN] Created offer:", offer);
@@ -112,12 +128,13 @@ function Join() {
             data: offer,
           });
         })
-        .catch((err) => console.error("[JOIN] Error creating offer:", err));
+        .catch((err) => console.error("[JOIN] Error creating or sending offer:", err));
     }
   };
 
   const goFullScreen = () => {
     if (videoRef.current) {
+      console.log("[JOIN] Requesting fullscreen mode for video element");
       if (videoRef.current.requestFullscreen) {
         videoRef.current.requestFullscreen();
       } else if (videoRef.current.webkitRequestFullscreen) {
@@ -149,12 +166,22 @@ function Join() {
         <div className="join-block">
           <h2>Viewing Stream: {streamCode}</h2>
           <div className="video-container">
-            <video ref={videoRef} autoPlay playsInline controls className="join-video" />
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              controls
+              className="join-video"
+            />
           </div>
           <div className="settings">
             <div className="option-group">
               <label htmlFor="quality">Quality:</label>
-              <select id="quality" value={quality} onChange={(e) => setQuality(e.target.value)}>
+              <select
+                id="quality"
+                value={quality}
+                onChange={(e) => setQuality(e.target.value)}
+              >
                 <option value="480p">480p</option>
                 <option value="720p">720p</option>
                 <option value="1080p">1080p</option>
