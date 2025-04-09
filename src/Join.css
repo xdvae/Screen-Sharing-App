@@ -1,0 +1,148 @@
+/* Join.css */
+.join-container {
+  width: 100%;
+  height: 100vh;
+  background: linear-gradient(135deg, #3e1f47, #5c2c62);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+/* Initial form for entering the stream code */
+.join-form {
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 15px;
+  padding: 40px;
+  text-align: center;
+  animation: fadeInUp 1s ease-out;
+}
+
+.join-form h2 {
+  color: #d67a8a;
+  margin-bottom: 20px;
+  font-size: 2.8rem;
+}
+
+.code-input {
+  padding: 10px;
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+  border: none;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 300px;
+}
+
+.join-button {
+  padding: 10px 20px;
+  background: #d67a8a;
+  color: #fff;
+  border: none;
+  border-radius: 25px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.join-button:hover {
+  background: #c06678;
+  transform: translateY(-2px);
+}
+
+.back-button {
+  display: inline-block;
+  margin-top: 20px;
+  text-decoration: none;
+  background: #d67a8a;
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.back-button:hover {
+  background: #c06678;
+  transform: translateY(-2px);
+}
+
+/* Joined Room UI */
+.join-block {
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 15px;
+  padding: 30px;
+  text-align: center;
+  width: 100%;
+  max-width: 600px;
+  animation: fadeInUp 1s ease-out;
+}
+
+.join-block h2 {
+  color: #d67a8a;
+  margin-bottom: 20px;
+  font-size: 2.5rem;
+}
+
+.video-container {
+  margin-bottom: 20px;
+}
+
+.join-video {
+  width: 100%;
+  max-height: 350px;
+  border-radius: 10px;
+  background: #000;
+}
+
+.settings {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.option-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.option-group label {
+  color: #ddd;
+  font-size: 1rem;
+  margin-bottom: 5px;
+}
+
+.option-group select {
+  padding: 5px;
+  border: none;
+  border-radius: 5px;
+}
+
+.fullscreen-button {
+  padding: 10px 20px;
+  background: #d67a8a;
+  color: #fff;
+  border: none;
+  border-radius: 25px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.fullscreen-button:hover {
+  background: #c06678;
+  transform: translateY(-2px);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
