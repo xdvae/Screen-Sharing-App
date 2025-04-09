@@ -1,10 +1,15 @@
 // Stream.jsx
 import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import io from "socket.io-client";
+import { io } from "socket.io-client";
 import "./Stream.css";
 
-const socket = io("http://localhost:5000");
+// Dynamic socket connection: use localhost if developing; otherwise, the current origin.
+const socket = io(
+  window.location.hostname === "localhost"
+    ? "http://localhost:5000"
+    : window.location.origin
+);
 
 function Stream() {
   const [broadcasting, setBroadcasting] = useState(false);
@@ -20,12 +25,12 @@ function Stream() {
     socket.on("connect", () => {
       console.log("[BROADCAST] Connected to server");
     });
+
     socket.on("signal", (data) => {
       console.log("[BROADCAST] Received signal:", data);
       const { type, data: signalData, from } = data;
       if (type === "offer") {
         console.log("[BROADCAST] Received offer from joiner:", from);
-        // Create new peer connection with STUN server
         const pc = new RTCPeerConnection({
           iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
         });
@@ -43,11 +48,9 @@ function Stream() {
           }
         };
 
-        // Set remote description with joiner's offer
         pc.setRemoteDescription(new RTCSessionDescription(signalData))
           .then(() => {
-            console.log("[BROADCAST] Remote description set successfully for joiner:", from);
-            // Add broadcaster media tracks to the connection
+            console.log("[BROADCAST] Remote description set for joiner:", from);
             if (mediaStream) {
               const tracks = mediaStream.getTracks();
               console.log("[BROADCAST] Adding tracks:", tracks);
@@ -57,7 +60,6 @@ function Stream() {
             }
           })
           .then(() => {
-            // Create answer after tracks are added
             return pc.createAnswer();
           })
           .then((answer) => {
@@ -65,7 +67,7 @@ function Stream() {
             return pc.setLocalDescription(answer).then(() => answer);
           })
           .then((answer) => {
-            console.log("[BROADCAST] Local description set. Sending answer to joiner:", from);
+            console.log("[BROADCAST] Sending answer to joiner:", from);
             socket.emit("signal", {
               room: streamId,
               type: "answer",
@@ -73,9 +75,7 @@ function Stream() {
               to: from,
             });
           })
-          .catch((err) => {
-            console.error("[BROADCAST] Error handling offer from joiner:", from, err);
-          });
+          .catch((err) => console.error("[BROADCAST] Error handling offer from joiner:", from, err));
       } else if (type === "ice-candidate") {
         const pc = peerConnections.current[from];
         if (pc) {
@@ -122,7 +122,7 @@ function Stream() {
       setMediaStream(stream);
       setBroadcasting(true);
 
-      // Notify the server that this client is broadcasting
+      // Notify the server that you're broadcasting.
       socket.emit("join", { room: generatedId, username: "Broadcaster" });
       socket.emit("start_broadcast", { room: generatedId });
     } catch (err) {
@@ -150,11 +150,7 @@ function Stream() {
         <div className="options">
           <div className="option-group">
             <label htmlFor="quality">Quality:</label>
-            <select
-              id="quality"
-              value={quality}
-              onChange={(e) => setQuality(e.target.value)}
-            >
+            <select id="quality" value={quality} onChange={(e) => setQuality(e.target.value)}>
               <option value="480p">480p</option>
               <option value="720p">720p</option>
               <option value="1080p">1080p</option>
@@ -164,23 +160,14 @@ function Stream() {
           </div>
           <div className="option-group">
             <label htmlFor="frameRate">Frame Rate (fps):</label>
-            <select
-              id="frameRate"
-              value={frameRate}
-              onChange={(e) => setFrameRate(Number(e.target.value))}
-            >
+            <select id="frameRate" value={frameRate} onChange={(e) => setFrameRate(Number(e.target.value))}>
               <option value={30}>30</option>
               <option value={60}>60</option>
             </select>
           </div>
           <div className="option-group">
             <label htmlFor="audio">Include Audio:</label>
-            <input
-              type="checkbox"
-              id="audio"
-              checked={includeAudio}
-              onChange={(e) => setIncludeAudio(e.target.checked)}
-            />
+            <input type="checkbox" id="audio" checked={includeAudio} onChange={(e) => setIncludeAudio(e.target.checked)} />
           </div>
         </div>
         {broadcasting ? (
@@ -197,15 +184,12 @@ function Stream() {
             <p>Your stream code:</p>
             <h3>{streamId}</h3>
             <p>
-              Share this link:{" "}
-              <code>{`${window.location.origin}/join/${streamId}`}</code>
+              Share this link: <code>{`${window.location.origin}/join/${streamId}`}</code>
             </p>
           </div>
         )}
         <video ref={videoRef} autoPlay playsInline className="stream-video" />
-        <Link to="/" className="back-button">
-          Back to Home
-        </Link>
+        <Link to="/" className="back-button">Back to Home</Link>
       </div>
     </div>
   );

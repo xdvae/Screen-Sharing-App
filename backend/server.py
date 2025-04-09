@@ -47,12 +47,10 @@ def on_signal(data):
     to = data.get("to")
     from_ = request.sid  # Sender's socket ID
 
-    # If joiner sends offer, relay it to broadcaster
     if type_ == "offer" and from_ != broadcasters.get(room):
         broadcaster = broadcasters.get(room)
         if broadcaster:
             emit('signal', {'type': type_, 'data': message, 'from': from_}, to=broadcaster)
-    # Otherwise if a target is specified, relay signal directly (answer, ice-candidate)
     elif to:
         emit('signal', {'type': type_, 'data': message, 'from': from_}, to=to)
     else:

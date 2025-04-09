@@ -1,10 +1,15 @@
 // Join.jsx
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import io from "socket.io-client";
+import { io } from "socket.io-client";
 import "./Join.css";
 
-const socket = io("http://localhost:5000");
+// Dynamic socket connection
+const socket = io(
+  window.location.hostname === "localhost"
+    ? "http://localhost:5000"
+    : window.location.origin
+);
 
 function Join() {
   const { id } = useParams(); // Stream code from URL (e.g. /join/ABC123)
@@ -39,9 +44,7 @@ function Join() {
           .then(() => {
             console.log("[JOIN] Set remote description with answer");
           })
-          .catch((err) =>
-            console.error("[JOIN] Error setting remote description:", err)
-          );
+          .catch((err) => console.error("[JOIN] Error setting remote description:", err));
         setBroadcasterId(from);
       } else if (type === "ice-candidate") {
         pc.current
@@ -49,22 +52,9 @@ function Join() {
           .then(() => {
             console.log("[JOIN] ICE candidate added");
           })
-          .catch((err) =>
-            console.error("[JOIN] Error adding ICE candidate:", err)
-          );
+          .catch((err) => console.error("[JOIN] Error adding ICE candidate:", err));
       }
     });
-
-    // Log ICE connection state changes for debugging.
-    const logIceStateChange = () => {
-      if (pc.current) {
-        console.log("[JOIN] ICE connection state change:", pc.current.iceConnectionState);
-      }
-    };
-
-    if (pc.current) {
-      pc.current.oniceconnectionstatechange = logIceStateChange;
-    }
 
     return () => {
       socket.off("connect");
@@ -85,10 +75,10 @@ function Join() {
       pc.current = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       });
-      
-      // Add a transceiver for video in receive-only mode.
+
+      // Add transceiver for video in recvonly mode.
       pc.current.addTransceiver("video", { direction: "recvonly" });
-      // If you want to receive audio, uncomment the following line:
+      // Optionally, for audio, add:
       // pc.current.addTransceiver("audio", { direction: "recvonly" });
 
       pc.current.onicecandidate = (event) => {
@@ -103,13 +93,12 @@ function Join() {
         }
       };
 
-      // When remote tracks arrive, attach them to the video element.
       pc.current.ontrack = (event) => {
         console.log("[JOIN] Received remote track", event.streams[0]);
         videoRef.current.srcObject = event.streams[0];
       };
 
-      // Create an offer, set it as the local description, and send it.
+      // Create an offer, set it locally, and send it.
       pc.current.createOffer()
         .then((offer) => {
           console.log("[JOIN] Created offer:", offer);
@@ -160,22 +149,12 @@ function Join() {
         <div className="join-block">
           <h2>Viewing Stream: {streamCode}</h2>
           <div className="video-container">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              controls
-              className="join-video"
-            />
+            <video ref={videoRef} autoPlay playsInline controls className="join-video" />
           </div>
           <div className="settings">
             <div className="option-group">
               <label htmlFor="quality">Quality:</label>
-              <select
-                id="quality"
-                value={quality}
-                onChange={(e) => setQuality(e.target.value)}
-              >
+              <select id="quality" value={quality} onChange={(e) => setQuality(e.target.value)}>
                 <option value="480p">480p</option>
                 <option value="720p">720p</option>
                 <option value="1080p">1080p</option>
